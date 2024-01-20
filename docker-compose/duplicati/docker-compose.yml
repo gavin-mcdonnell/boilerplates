@@ -1,0 +1,34 @@
+version: "2.1"
+services:
+  duplicati:
+    image: lscr.io/linuxserver/duplicati:latest
+    container_name: duplicati
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - TZ=$TZ
+      - CLI_ARGS= #optional
+    volumes:
+      - $DOCKERHOME/appdata/duplicati:/config #Config Files
+      - $MEDIASTORAGE/extbackup/<remote_backup_server>/duplicati/:/RemoteBackups #Backup Storage
+      - $DOCKERHOME/appdata:/Config_Backup #What to Backup
+    # ports:
+    #    - 8200:8200
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.duplicati.entrypoints=http
+      - traefik.http.routers.duplicati.rule=Host(`duplicati.local.example.com`)
+      - traefik.http.middlewares.duplicati-https-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.duplicati.middlewares=duplicati-https-redirect
+      - traefik.http.routers.duplicati-secure.entrypoints=https
+      - traefik.http.routers.duplicati-secure.rule=Host(`duplicati.local.example.com`)
+      - traefik.http.routers.duplicati-secure.tls=true
+      - traefik.http.routers.duplicati-secure.service=duplicati
+      - traefik.http.services.duplicati.loadbalancer.server.port=8200
+      - traefik.docker.network=proxy
+networks:
+  proxy:
+    external: true

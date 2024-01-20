@@ -1,0 +1,62 @@
+version: "3.3"
+services:
+  speedtesttracker:
+    container_name: speedtest-tracker
+    #    ports:
+    #      - 8085:80
+    #      - 8443:443
+    environment:
+      - PUID=$PUID
+      - PGID=$PGID
+      - MAIL_HOST=$SMTP_EMAIL_SERVER
+      - MAIL_PORT=$SMTP_EMAIL_SERVER_PORT
+      - MAIL_USERNAME=$SMTP_EMAIL_SERVER_USER
+      - MAIL_PASSWORD=$SMTP_EMAIL_SERVER_PASSWORD
+      - MAIL_ENCRYPTION=true
+      - MAIL_FROM_ADDRESS=$SMTP_EMAIL_FROM
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=speedtest_tracker
+      - DB_USERNAME=speedy
+      - DB_PASSWORD=password
+      - TZ=$TZ
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - $DOCKERHOME/appdata/speedtest-tracker:/config
+      - $DOCKERHOME/appdata/speedtest-tracker/web:/etc/ssl/web
+    image: ghcr.io/alexjustesen/speedtest-tracker:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.speedtesttracker.entrypoints=http
+      - traefik.http.routers.speedtesttracker.rule=Host(`speedtest-tracker.local.com`) || Host(`speedtest.example.com`)
+      - traefik.http.middlewares.speedtesttracker-https-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.speedtesttracker.middlewares=duplicati-https-redirect
+      - traefik.http.routers.speedtesttracker-secure.entrypoints=https
+      - traefik.http.routers.speedtesttracker-secure.rule=Host(`speedtest-tracker.local.example.com`) || Host(`speedtest.example.com`)
+      - traefik.http.routers.speedtesttracker-secure.tls=true
+      - traefik.http.routers.speedtesttracker-secure.service=speedtesttracker
+      - traefik.http.services.speedtesttracker.loadbalancer.server.port=80
+      - traefik.docker.network=proxy
+  db:
+    image: mariadb:10
+    restart: always
+    environment:
+      - MARIADB_DATABASE=speedtest_tracker
+      - MARIADB_USER=speedy
+      - MARIADB_PASSWORD=password
+      - MARIADB_RANDOM_ROOT_PASSWORD=true
+    volumes:
+      - speedtest-db:/var/lib/mysql
+    networks:
+      - proxy
+volumes:
+  speedtest-db: null
+networks:
+  proxy:
+    external: true

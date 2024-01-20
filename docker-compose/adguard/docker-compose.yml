@@ -1,0 +1,32 @@
+version: "2.1"
+services:
+  adguardhome:
+    image: adguard/adguardhome
+    container_name: adguardhome
+    restart: unless-stopped
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+    #      - 8084:80/tcp #change this to something like 81:80 if port 80 is already in use
+    #      - 3000:3000/tcp
+    volumes:
+      - $DOCKERHOME/appdata/adguard/workdir:/opt/adguardhome/work
+      - $DOCKERHOME/appdata/adguard/confdir:/opt/adguardhome/conf
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.adguard.entrypoints=http
+      - traefik.http.routers.adguard.rule=Host(`adguard.local.example.com`) || Host(`adguard.example.com``) # change with your own domain/sub domain
+      - traefik.http.middlewares.adguard-https-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.adguard.middlewares=adguard-https-redirect
+      - traefik.http.routers.adguard-secure.entrypoints=https
+      - traefik.http.routers.adguard-secure.rule=Host(`adguard.local.example.com`) || Host(`adguard.example.com`) # change with your own domain/sub domain
+      - traefik.http.routers.adguard-secure.tls=true
+#      - traefik.http.routers.adguard-secure.tls.certresolver=http
+      - traefik.http.routers.adguard-secure.service=adguard
+      - traefik.http.services.adguard.loadbalancer.server.port=3000
+      - traefik.docker.network=proxy
+networks:
+  proxy:
+    external: true

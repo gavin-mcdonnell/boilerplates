@@ -1,0 +1,32 @@
+version: "3"
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    volumes:
+      - $DOCKERHOME/appdata/homeassistant/config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    # ports:
+    #  - 8123:8123
+    # devices:
+    #   - /dev/ttyACMO  # (optional) Add serial devices to the container    
+    restart: unless-stopped
+    privileged: true
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.homeassistant.entrypoints=http
+      - traefik.http.routers.homeassistant.rule=Host(`homeassistant.local.example.com`)
+      - traefik.http.middlewares.homeassistant-https-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.homeassistant.middlewares=homeassitant-https-redirect
+      - traefik.http.routers.homeassistant-secure.entrypoints=https
+      - traefik.http.routers.homeassistant-secure.rule=Host(`homeassistant.local.example.com`)
+      - traefik.http.routers.homeassistant-secure.tls=true
+      - traefik.http.routers.homeassistant-secure.service=homeassistant
+      - traefik.http.services.homeassistant.loadbalancer.server.port=8123
+      - traefik.docker.network=proxy
+networks:
+  proxy:
+    external: true

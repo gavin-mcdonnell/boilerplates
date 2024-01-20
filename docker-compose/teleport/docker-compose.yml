@@ -1,0 +1,30 @@
+services:
+  teleport:
+    image: public.ecr.aws/gravitational/teleport-distroless-debug:14
+    container_name: teleport
+    ports:
+      - 3080:3080
+      - 3023:3023
+      - 3024:3024
+      - 3025:3025
+    volumes:
+      - $DOCKERHOME/appdata/teleport/config:/etc/teleport
+      - $DOCKERHOME/appdata/teleport/data:/var/lib/teleport
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=false
+      - traefik.http.routers.teleport.entrypoints=http
+      - traefik.http.routers.teleport.rule=Host(`teleport.local.example.com`)
+      - traefik.http.middlewares.teleport-https-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.teleport.middlewares=teleport-https-redirect
+      - traefik.http.routers.teleport-secure.entrypoints=https
+      - traefik.http.routers.teleport-secure.rule=Host(`teleport.local.example.com`)
+      - traefik.http.routers.teleport-secure.tls=true
+      - traefik.http.routers.teleport-secure.service=teleport
+      - traefik.http.services.teleport.loadbalancer.server.port=3080
+      - traefik.docker.network=proxy
+networks:
+  proxy:
+    external: true
